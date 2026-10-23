@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orient BlackSwan History Bot</title>
+  <meta name="description" content="AI Assistant for the Orient BlackSwan History 2024-25 catalogue powered by RAG and LangChain.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --card-bg: rgba(18, 24, 38, 0.72);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-glow: rgba(99, 102, 241, 0.25);
+      --user-bubble: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --bot-bubble: rgba(26, 34, 52, 0.75);
+      --bot-border: rgba(255, 255, 255, 0.07);
+      --primary-accent: #6366f1;
+      --accent-gold: #f59e0b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-subtle: #64748b;
+      --font-heading: 'Outfit', sans-serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Full-screen 3D Canvas */
+    #bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Ambient vignette & gradient glow overlay */
+    .ambient-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+                  radial-gradient(circle at 80% 80%, rgba(245, 158, 11, 0.05) 0%, transparent 50%),
+                  radial-gradient(circle at 50% 50%, transparent 40%, rgba(7, 9, 14, 0.85) 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Main Container */
+    .app-container {
+      position: relative;
+      z-index: 10;
+      width: 94vw;
+      max-width: 1020px;
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7),
+                  0 0 0 1px rgba(255, 255, 255, 0.05),
+                  0 0 35px -5px rgba(99, 102, 241, 0.15);
+      overflow: hidden;
+      animation: containerAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes containerAppear {
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Header */
+    header {
+      padding: 18px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(14, 20, 33, 0.5);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(245, 158, 11, 0.2));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, #ffffff 30%, #cbd5e1 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-text p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 20px;
+      font-size: 0.72rem;
+      color: #34d399;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background-color: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Chat Messages Box */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Message Item */
+    .message-row {
+      display: flex;
+      gap: 12px;
+      max-width: 82%;
+      animation: messageIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes messageIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .message-row.user-row {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-row.bot-row {
+      align-self: flex-start;
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .bot-row .avatar {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(124, 58, 237, 0.3));
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #cbd5e1;
+    }
+
+    .user-row .avatar {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff;
+    }
+
+    .bubble-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bubble {
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      font-size: 0.93rem;
+      line-height: 1.55;
+      word-break: break-word;
+      position: relative;
+    }
+
+    .user-row .bubble {
+      background: var(--user-bubble);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 16px rgba(79, 70, 229, 0.25);
+    }
+
+    .bot-row .bubble {
+      background: var(--bot-bubble);
+      color: var(--text-main);
+      border: 1px solid var(--bot-border);
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .meta-time {
+      font-size: 0.7rem;
+      color: var(--text-subtle);
+      margin-top: 2px;
+      padding: 0 4px;
+    }
+
+    .user-row .meta-time {
+      text-align: right;
+    }
+
+    /* Source Reference Card / Accordion */
+    .source-box {
+      margin-top: 10px;
+      background: rgba(10, 14, 23, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      overflow: hidden;
+      font-size: 0.8rem;
+    }
+
+    .source-header {
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+
+    .source-header:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    .source-toggle-icon {
+      font-size: 11px;
+      color: var(--text-muted);
+      transition: transform 0.25s ease;
+    }
+
+    .source-box.open .source-toggle-icon {
+      transform: rotate(180deg);
+    }
+
+    .source-content {
+      display: none;
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      line-height: 1.5;
+      font-size: 0.78rem;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .source-box.open .source-content {
+      display: block;
+    }
+
+    .source-chunk {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .source-chunk:last-child {
+      border-bottom: none;
+    }
+
+    .chunk-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    /* Thinking Animation */
+    .thinking-bubble {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 20px;
+      background: var(--bot-bubble);
+      border: 1px solid var(--bot-border);
+      border-radius: var(--radius-md);
+      border-bottom-left-radius: 4px;
+      width: fit-content;
+    }
+
+    .thinking-dot {
+      width: 7px;
+      height: 7px;
+      background: #a5b4fc;
+      border-radius: 50%;
+      animation: thinkingBounce 1.4s infinite ease-in-out both;
+    }
+
+    .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+    .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes thinkingBounce {
+      0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    .thinking-label {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-left: 6px;
+      font-style: italic;
+    }
+
+    /* Quick Prompt Chips */
+    .quick-prompts-bar {
+      padding: 6px 26px 12px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .quick-prompts-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .prompt-chip {
+      flex-shrink: 0;
+      padding: 7px 13px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      font-size: 0.76rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+
+    .prompt-chip:hover {
+      background: rgba(99, 102, 241, 0.16);
+      border-color: rgba(99, 102, 241, 0.4);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Input Footer */
+    footer {
+      padding: 14px 26px 20px;
+      background: rgba(14, 20, 33, 0.6);
+      border-top: 1px solid var(--card-border);
+    }
+
+    .input-form {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(9, 12, 19, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 6px 8px 6px 18px;
+      transition: all 0.25s ease;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+    }
+
+    .input-form:focus-within {
+      border-color: var(--primary-accent);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .input-form input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-family: var(--font-body);
+      font-size: 0.94rem;
+    }
+
+    .input-form input::placeholder {
+      color: var(--text-subtle);
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      border: none;
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+    }
+
+    .send-btn:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .send-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .app-container {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        border: none;
+      }
+      header {
+        padding: 14px 18px;
+      }
+      .chat-messages {
+        padding: 16px;
+      }
+      .message-row {
+        max-width: 90%;
+      }
+      footer {
+        padding: 10px 16px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Full-screen 3D Background Canvas -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- Ambient lighting overlay -->
+  <div class="ambient-overlay"></div>
+
+  <!-- Chatbot Glassmorphism App Container -->
+  <main class="app-container" id="chatbot-app">
+    
+    <!-- Header -->
+    <header>
+      <div class="brand-section">
+        <div class="logo-badge" title="Orient BlackSwan History Bot">📜</div>
+        <div class="brand-text">
+          <h1>Orient BlackSwan History Bot</h1>
+          <p>
+            <span>Catalogue 2024-25 RAG Assistant</span>
+            <span class="status-indicator">
+              <span class="status-dot"></span>
+              API Online
+            </span>
+          </p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="clear-btn" title="Clear Chat History">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Messages History Box -->
+    <section class="chat-messages" id="chat-messages" aria-live="polite">
+      <!-- Welcome message -->
+      <div class="message-row bot-row">
+        <div class="avatar">🏛️</div>
+        <div class="bubble-wrapper">
+          <div class="bubble">
+            Hello! I am your <strong>Orient BlackSwan History Catalogue Assistant</strong>.
+            <br><br>
+            I answer questions based strictly on the <em>History 2024-25</em> catalogue documents and will always provide source page citations.
+            <br><br>
+            What historical title, author, or publisher section would you like to explore today?
+          </div>
+          <span class="meta-time">Just now</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Suggestion Prompts -->
+    <div class="quick-prompts-bar">
+      <div class="prompt-chip" data-query="Who is the author of 'A Critical History of Women’s Health in Modern Sri Lanka'?">
+        🔍 Women's Health in Sri Lanka
+      </div>
+      <div class="prompt-chip" data-query="What is the book 'Discovering India Anew' about and who wrote it?">
+        📖 Discovering India Anew
+      </div>
+      <div class="prompt-chip" data-query="Which publishing houses does Orient BlackSwan act as exclusive distributor for?">
+        🏢 Distributed Publishers
+      </div>
+      <div class="prompt-chip" data-query="What is the capital of France?">
+        ❓ Out-of-catalogue test
+      </div>
+    </div>
+
+    <!-- Input Footer -->
+    <footer>
+      <form class="input-form" id="chat-form">
+        <input 
+          type="text" 
+          id="user-input" 
+          placeholder="Ask about titles, authors, or series in the History catalogue..." 
+          autocomplete="off"
+          required
+        />
+        <button type="submit" class="send-btn" id="send-button" title="Send Question">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </form>
+    </footer>
+
+  </main>
+
+  <!-- Three.js CDN for animated 3D background -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    /* =======================================================================
+       1. Three.js Animated 3D Background (Rotating Armillary Sphere & Bubbles)
+       ======================================================================= */
+    const canvas = document.getElementById('bg-canvas');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x07090e, 0.0025);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 40;
+
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Group for rotating 3D historical armillary sphere
+    const sphereGroup = new THREE.Group();
+    scene.add(sphereGroup);
+
+    // Outer wireframe dodecahedron
+    const dodecaGeo = new THREE.DodecahedronGeometry(14, 1);
+    const dodecaMat = new THREE.MeshBasicMaterial({
+      color: 0x6366f1,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.18
+    });
+    const dodecaMesh = new THREE.Mesh(dodecaGeo, dodecaMat);
+    sphereGroup.add(dodecaMesh);
+
+    // Inner icosahedron
+    const icoGeo = new THREE.IcosahedronGeometry(9, 1);
+    const icoMat = new THREE.MeshBasicMaterial({
+      color: 0xf59e0b,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.25
+    });
+    const icoMesh = new THREE.Mesh(icoGeo, icoMat);
+    sphereGroup.add(icoMesh);
+
+    // Floating 3D Bubbles / Glowing Orbs
+    const bubbleCount = 45;
+    const bubbleGeo = new THREE.SphereGeometry(1, 16, 16);
+    const bubbles = [];
+
+    for (let i = 0; i < bubbleCount; i++) {
+      const isGold = Math.random() > 0.6;
+      const bubbleMat = new THREE.MeshBasicMaterial({
+        color: isGold ? 0xf59e0b : 0x818cf8,
+        wireframe: true,
+        transparent: true,
+        opacity: Math.random() * 0.25 + 0.1
+      });
+      const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
+      
+      const scale = Math.random() * 1.5 + 0.4;
+      bubble.scale.set(scale, scale, scale);
+
+      bubble.position.x = (Math.random() - 0.5) * 80;
+      bubble.position.y = (Math.random() - 0.5) * 60;
+      bubble.position.z = (Math.random() - 0.5) * 50;
+
+      bubble.userData = {
+        speedY: Math.random() * 0.03 + 0.01,
+        rotX: (Math.random() - 0.5) * 0.015,
+        rotY: (Math.random() - 0.5) * 0.015,
+        initialY: bubble.position.y
+      };
+
+      scene.add(bubble);
+      bubbles.push(bubble);
+    }
+
+    // Starfield / subtle dust particles
+    const particleCount = 200;
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      particlePositions[i] = (Math.random() - 0.5) * 120;
+      particlePositions[i + 1] = (Math.random() - 0.5) * 100;
+      particlePositions[i + 2] = (Math.random() - 0.5) * 80;
+    }
+
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0xc7d2fe,
+      size: 0.8,
+      transparent: true,
+      opacity: 0.4
+    });
+    const particleSystem = new THREE.Points(particleGeo, particleMat);
+    scene.add(particleSystem);
+
+    // Mouse parallax
+    let mouseX = 0;
+    let mouseY = 0;
+    window.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Rotate 3D Armillary structure slowly
+      sphereGroup.rotation.x += 0.0018;
+      sphereGroup.rotation.y += 0.0028;
+
+      icoMesh.rotation.x -= 0.003;
+      icoMesh.rotation.z += 0.002;
+
+      // Camera parallax
+      camera.position.x += (mouseX * 4 - camera.position.x) * 0.03;
+      camera.position.y += (-mouseY * 3 - camera.position.y) * 0.03;
+      camera.lookAt(scene.position);
+
+      // Animate floating bubbles
+      bubbles.forEach(b => {
+        b.position.y += b.userData.speedY;
+        b.rotation.x += b.userData.rotX;
+        b.rotation.y += b.userData.rotY;
+
+        if (b.position.y > 35) {
+          b.position.y = -35;
+        }
+      });
+
+      particleSystem.rotation.y += 0.0004;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Window resize handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* =======================================================================
+       2. Chatbot Logic & API Communication (POST http://localhost:8000/ask)
+       ======================================================================= */
+    const API_URL = 'http://localhost:8000/ask';
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+    const clearBtn = document.getElementById('clear-btn');
+    const promptChips = document.querySelectorAll('.prompt-chip');
+
+    // Utility: Format time
+    function getCurrentTime() {
+      const now = new Date();
+      return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Scroll chat to bottom
+    function scrollToBottom() {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Append user message
+    function appendUserMessage(text) {
+      const row = document.createElement('div');
+      row.className = 'message-row user-row';
+      row.innerHTML = `
+        <div class="avatar">👤</div>
+        <div class="bubble-wrapper">
+          <div class="bubble">${escapeHtml(text)}</div>
+          <span class="meta-time">${getCurrentTime()}</span>
+        </div>
+      `;
+      chatMessages.appendChild(row);
+      scrollToBottom();
+    }
+
+    // Append thinking indicator
+    function appendThinkingIndicator() {
+      const row = document.createElement('div');
+      row.className = 'message-row bot-row';
+      row.id = 'thinking-indicator';
+      row.innerHTML = `
+        <div class="avatar">🏛️</div>
+        <div class="bubble-wrapper">
+          <div class="thinking-bubble">
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-dot"></span>
+            <span class="thinking-label">Consulting History catalogue...</span>
+          </div>
+        </div>
+      `;
+      chatMessages.appendChild(row);
+      scrollToBottom();
+      return row;
+    }
+
+    // Remove thinking indicator
+    function removeThinkingIndicator() {
+      const el = document.getElementById('thinking-indicator');
+      if (el) el.remove();
+    }
+
+    // Append bot response with optional expandable sources
+    function appendBotMessage(answer, retrievedChunks) {
+      removeThinkingIndicator();
+
+      const row = document.createElement('div');
+      row.className = 'message-row bot-row';
+
+      let sourceHtml = '';
+      if (retrievedChunks && retrievedChunks.length > 0) {
+        const chunkItems = retrievedChunks.map((c, i) => `
+          <div class="source-chunk">
+            <span class="chunk-tag">Chunk ${i + 1} &bull; ${c.page ? 'Page ' + c.page : 'Unknown Section'}</span>
+            <p>${escapeHtml(c.content.substring(0, 220))}${c.content.length > 220 ? '...' : ''}</p>
+          </div>
+        `).join('');
+
+        sourceHtml = `
+          <div class="source-box" onclick="this.classList.toggle('open')">
+            <div class="source-header">
+              <span class="source-badge">
+                📚 Source Context (${retrievedChunks.length} chunks retrieved)
+              </span>
+              <span class="source-toggle-icon">▼</span>
+            </div>
+            <div class="source-content">
+              ${chunkItems}
+            </div>
+          </div>
+        `;
+      }
+
+      row.innerHTML = `
+        <div class="avatar">🏛️</div>
+        <div class="bubble-wrapper">
+          <div class="bubble">${formatMarkdown(answer)}</div>
+          ${sourceHtml}
+          <span class="meta-time">${getCurrentTime()}</span>
+        </div>
+      `;
+      chatMessages.appendChild(row);
+      scrollToBottom();
+    }
+
+    // Basic markdown formatting (bold, newlines)
+    function formatMarkdown(text) {
+      if (!text) return '';
+      let formatted = escapeHtml(text);
+      // Bold **text**
+      formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Italic *text*
+      formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      // Line breaks
+      formatted = formatted.replace(/\n/g, '<br>');
+      return formatted;
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(string) {
+      const div = document.createElement('div');
+      div.textContent = string;
+      return div.innerHTML;
+    }
+
+    // Send Message Handler
+    async function handleSendMessage(questionText) {
+      const query = (questionText || userInput.value).trim();
+      if (!query) return;
+
+      appendUserMessage(query);
+      userInput.value = '';
+      sendButton.disabled = true;
+
+      appendThinkingIndicator();
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ question: query }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.detail || `Server error (${response.status})`);
+        }
+
+        const data = await response.json();
+        appendBotMessage(data.answer, data.retrieved_chunks);
+
+      } catch (err) {
+        removeThinkingIndicator();
+        console.error('Fetch error:', err);
+        appendBotMessage(
+          `⚠️ **Connection Error**: Could not retrieve response from \`${API_URL}\`.\n\nPlease ensure your FastAPI server is running with: \`python3 server.py\` or \`uvicorn server:app --reload\`.`,
+          []
+        );
+      } finally {
+        sendButton.disabled = false;
+        userInput.focus();
+      }
+    }
+
+    // Form submit listener
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleSendMessage();
+    });
+
+    // Quick prompt chips click listener
+    promptChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const query = chip.getAttribute('data-query');
+        if (query) {
+          handleSendMessage(query);
+        }
+      });
+    });
+
+    // Clear chat button
+    clearBtn.addEventListener('click', () => {
+      chatMessages.innerHTML = `
+        <div class="message-row bot-row">
+          <div class="avatar">🏛️</div>
+          <div class="bubble-wrapper">
+            <div class="bubble">
+              Chat cleared. Ask any question about the Orient BlackSwan History 2024-25 catalogue!
+            </div>
+            <span class="meta-time">${getCurrentTime()}</span>
+          </div>
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>
