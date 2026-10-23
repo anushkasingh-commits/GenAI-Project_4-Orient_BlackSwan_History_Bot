@@ -25,6 +25,25 @@ The project has three parts:
 
 **Question flow:** Question → embed → search Chroma (top 4) → build prompt with context → LLM → answer with page reference (or "Not found").
 
+```mermaid
+flowchart TD
+    A[History_2024-25.pdf] -->|ingest.py: PyPDFLoader| B[91 pages of text]
+    B -->|RecursiveCharacterTextSplitter<br/>500 chars, 50 overlap| C[Text chunks]
+    C -->|all-MiniLM-L6-v2 embeddings| D[(history_db<br/>Chroma vector store)]
+
+    E[User question<br/>chat UI or /ask] --> F[index.html sends POST /ask]
+    F --> G[server.py<br/>FastAPI]
+    G -->|embed question| H[Retriever<br/>top 4 chunks]
+    D --> H
+    H --> I[Build prompt<br/>system rules + context + question]
+    I --> J[LLM<br/>Gemini / Groq / OpenAI]
+    J --> K{Answer found<br/>in context?}
+    K -->|Yes| L[Answer + page reference]
+    K -->|No| M["Not found"]
+    L --> N[Response shown in chat]
+    M --> N
+```
+
 ---
 
 ## 📁 Project Structure
